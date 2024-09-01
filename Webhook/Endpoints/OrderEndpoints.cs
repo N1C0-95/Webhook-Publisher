@@ -1,5 +1,9 @@
-﻿using System.Text;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.Mvc;
+using System.Text;
 using System.Text.Json;
+using Webhook.Auth;
 using Webhook.Model.Request;
 using Webhook.Repository;
 
@@ -13,13 +17,15 @@ namespace Webhook.Endpoints
         }
         public static void UseOrderEndponts(this IEndpointRouteBuilder app)
         {
-            app.MapPost("webhook", SubscribeWebhook).WithName("CreateWebhook").Accepts<WebhookRequest>("application/json").Produces<WebhookRequest>(201);
+            app.MapPost("webhook", SubscribeWebhook).WithName("CreateWebhook").Accepts<WebhookRequest>("application/json").Produces<WebhookRequest>(201).Produces(401);
             app.MapGet("webhook", GetWebhooks).WithName("GetWebhooks").Produces<WebhookRequest>(200);
             app.MapDelete("webhook/{id}", DeleteWebhook).WithName("DeleteWebhok").Produces(204).Produces(404);
             app.MapPost("order", InvokeOrderWebhook).WithName("AddOrder").Produces<Order>(200);
+            app.MapPost("echo",Echo).WithName("Echo").Produces(200);
             
         }
         //Methods
+        [Authorize(AuthenticationSchemes = ApiKeySchemeConstant.SchemeName)]
         private static async Task<IResult> SubscribeWebhook(WebhookRequest webhook, IWebhookRepository webookRepository)
         {
 
@@ -66,10 +72,13 @@ namespace Webhook.Endpoints
                 var jsonResponse = await response.Content.ReadAsStringAsync();
                 Console.WriteLine($"{jsonResponse}\n");
             }
-
-
-
-
+        }
+        
+        private static async Task<IResult> Echo([FromHeader(Name = "x-functions-key")] string apiKey)
+        {
+            
+            
+            return Results.Ok($"API Key Value : {apiKey} ");
         }
 
         private static async Task<IResult> DeleteWebhook(int id, IWebhookRepository webookRepository)

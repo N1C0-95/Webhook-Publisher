@@ -1,7 +1,9 @@
 
+using System.Runtime.CompilerServices;
 using Webhook.Auth;
 using Webhook.Data;
 using Webhook.Endpoints;
+using Webhook.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +15,10 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IDbConnectionFactory>(new SqliteConnectionFactory(builder.Configuration.GetValue<string>("Database:ConnectionString")));
 builder.Services.AddSingleton<DatabaseInitializer>();
 
+builder.Services.AddTransient<IWebhookService, WebhookService>();
+builder.Services.AddSingleton<IOrderWebhook, OrderWebhook>();
+
+
 builder.Services.AddOrderEndpoint();
 
 var app = builder.Build();
@@ -21,7 +27,7 @@ var app = builder.Build();
 app.UseAuthorization();
 
 //use endpoints
-app.UseOrderEndponts();
+app.UseOrderEndponts(app.Services.GetRequiredService<IOrderWebhook>());
 
 //init database
 var databaseInitializer = app.Services.GetRequiredService<DatabaseInitializer>();
